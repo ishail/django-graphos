@@ -1,13 +1,16 @@
 from .base import BaseChart
 import json
 
-
 from django.template.loader import render_to_string
+from ..utils import JSONEncoderForHTML
 
 
 class BaseHighCharts(BaseChart):
-    def get_template(self):
-        return "graphos/highcharts.html"
+    def get_html_template(self):
+        return "graphos/highcharts/html.html"
+
+    def get_js_template(self):
+        return "graphos/highcharts/js.html"
 
     def get_series(self):
         data = self.get_data()
@@ -15,14 +18,13 @@ class BaseHighCharts(BaseChart):
         serieses = []
         for i, name in enumerate(series_names):
             serieses.append({"name": name, "data": column(data, i+1)[1:]})
-        return json.dumps(serieses)
+        return json.dumps(serieses, cls=JSONEncoderForHTML)
 
     def get_categories(self):
-        return json.dumps(column(self.get_data(), 0)[1:])
+        return json.dumps(column(self.get_data(), 0)[1:], cls=JSONEncoderForHTML)
 
     def get_x_axis_title(self):
         return self.get_data()[0][0]
-
 
 
 class LineChart(BaseHighCharts):
@@ -41,9 +43,25 @@ class ColumnChart(BaseHighCharts):
 
 
 class PieChart(BaseHighCharts):
+    def get_series(self):
+        data = self.get_data()
+        series_names = data[0][1:]
+        serieses = []
+        for i, name in enumerate(series_names):
+            serieses.append({"name": name, "data": pie_column(data, i+1)[1:]})
+        return json.dumps(serieses)
+
     def get_chart_type(self):
         return "pie"
+
+class AreaChart(BaseHighCharts):
+    def get_chart_type(self):
+        return "area"
 
 
 def column(matrix, i):
     return [row[i] for row in matrix]
+
+
+def pie_column(matrix, i):
+    return [{'name':row[0],'y':row[1]} for row in matrix]

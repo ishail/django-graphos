@@ -1,7 +1,7 @@
 import json
 
 from .base import BaseChart
-from ..utils import get_default_options
+from ..utils import get_default_options, JSONEncoderForHTML
 
 
 class BaseFlotChart(BaseChart):
@@ -13,7 +13,7 @@ class BaseFlotChart(BaseChart):
         serieses = []
         for i in range(1, len(self.header)):
             current_column = [el[i] for el in data_only]
-            current_series = zip(first_column, current_column)
+            current_series = self.zip_list(first_column, current_column)
             serieses.append(current_series)
         return serieses
 
@@ -28,15 +28,18 @@ class BaseFlotChart(BaseChart):
         return series_objects
 
     def get_series_objects_json(self):
-        return json.dumps(self.get_series_objects())
+        return json.dumps(self.get_series_objects(), cls=JSONEncoderForHTML)
 
     def get_options(self):
         options = get_default_options()
         options.update(self.options)
         return options
 
-    def get_template(self):
-        return 'graphos/flot.html'
+    def get_html_template(self):
+        return 'graphos/flot/html.html'
+
+    def get_js_template(self):
+        return 'graphos/flot/js.html'
 
 
 class PointChart(BaseFlotChart):
@@ -72,5 +75,6 @@ class ColumnChart(BaseFlotChart):
         options["horizontal"] = True
         return options
 
+
 class PieChart(BaseFlotChart):
-    pass  #TODO
+    pass  # TODO
