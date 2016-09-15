@@ -27,7 +27,6 @@ except ImportError:
 
 import markdown
 import datetime
-import pymongo
 from dateutil.parser import parse
 
 class MongoJson(FlotAsJson):
@@ -137,7 +136,7 @@ class Demo(TemplateView):
         simple_data_source = SimpleDataSource(data=data)
         line_chart = self.renderer.LineChart(data_source,
                                       options={'title': "Sales Growth"})
-        column_chart = self.renderer.ColumnChart(SimpleDataSource(data=data),
+        column_chart = self.renderer.ColumnChart(simple_data_source,
                                           options={'title': "Sales/ Expense"})
         bar_chart = self.renderer.BarChart(data_source,
                                     options={'title': "Expense Growth"})
@@ -158,16 +157,20 @@ class Demo(TemplateView):
 def home(request):
     chart = flot.LineChart(SimpleDataSource(data=data), html_id="line_chart")
     g_chart = gchart.LineChart(SimpleDataSource(data=data))
+    context = {'chart': chart,
+               'g_chart': g_chart}
+    return render(request, 'demo/home.html', context)
+
+
+def other(request):
     cursor = get_mongo_cursor("graphos_mongo",
                               "zips",
                               max_docs=100)
     m_data = MongoDBDataSource(cursor=cursor, fields=['_id', 'pop'])
     m_chart = flot.LineChart(m_data)
-
-    context = {'chart': chart,
-               'g_chart': g_chart,
-               'm_chart': m_chart}
-    return render(request, 'demo/home.html', context)
+    context = {}
+    context['m_chart'] = m_chart
+    return render(request, 'demo/other.html', context)
 
 
 @cache_page(60*60*24)
@@ -185,17 +188,53 @@ class GChartDemo(Demo):
 
     def get_context_data(self, **kwargs):
         context = super(GChartDemo, self).get_context_data(**kwargs)
+        data_source = context['data_source']
         candlestick_chart = self.renderer.CandlestickChart(SimpleDataSource
                                                     (data=candlestick_data))
         treemap_chart = self.renderer.TreeMapChart(SimpleDataSource(data=treemap_data))
+        area_chart = self.renderer.AreaChart(data_source)
+        queryset = Account.objects.all()
+        data_source = ModelDataSource(queryset, fields=['year', 'sales'])
+        gauge_chart = self.renderer.GaugeChart(
+            data_source,
+            options={
+                'redFrom': 0,
+                'redTo': 800,
+                'yellowFrom': 800,
+                'yellowTo': 1500,
+                'greenFrom': 1500,
+                'greenTo': 3000,
+                'max': 3000,
+            })
         context.update({'candlestick_chart': candlestick_chart,
-                       'treemap_chart': treemap_chart})
+                       'treemap_chart': treemap_chart,
+                       'gauge_chart': gauge_chart,
+                       'area_chart': area_chart})
         return context
 
 gchart_demo = GChartDemo.as_view(renderer=gchart)
 
 class YUIDemo(Demo):
     template_name = 'demo/yui.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(YUIDemo, self).get_context_data(**kwargs)
+        queryset = Account.objects.all()
+        data_source = ModelDataSource(queryset,
+                                      fields=['year', 'sales'])
+        area_chart = self.renderer.AreaChart(data_source)
+        area_spline_chart = self.renderer.AreaSplineChart(data_source)
+        spline_chart = self.renderer.SplineChart(SimpleDataSource(data=data))
+        combo_chart = self.renderer.ComboChart(SimpleDataSource(data=data))
+        combo_spline_chart = self.renderer.ComboSplineChart(SimpleDataSource(data=data))
+        marker_series_chart = self.renderer.MarkerSeriesChart(SimpleDataSource(data=data))
+        context.update({'area_chart': area_chart,
+                        'area_spline_chart': area_spline_chart,
+                        'spline_chart': spline_chart,
+                        'combo_chart': combo_chart,
+                        'combo_spline_chart': combo_spline_chart,
+                        'marker_series_chart': marker_series_chart})
+        return context
 
 yui_demo = YUIDemo.as_view(renderer=yui)
 
@@ -210,14 +249,15 @@ class MorrisDemo(TemplateView):
         queryset = Account.objects.all()
         data_source = ModelDataSource(queryset,
                                       fields=['year', 'sales'])
-        line_chart = self.renderer.LineChart(data_source,
-                                      options={'title': "Sales Growth"})
-        bar_chart = self.renderer.BarChart(data_source,
-                                    options={'title': "Expense Growth"})
+        simple_data_source = SimpleDataSource(data=data)
+        line_chart = self.renderer.LineChart(data_source)
+        bar_chart = self.renderer.BarChart(simple_data_source)
         donut_chart = self.renderer.DonutChart(data_source)
+        area_chart = self.renderer.AreaChart(data_source)
         context = {"line_chart": line_chart,
                'bar_chart': bar_chart,
-               'donut_chart': donut_chart}
+               'donut_chart': donut_chart,
+               'area_chart': area_chart}
         context.update(super_context)
         return context
 
@@ -233,7 +273,10 @@ class FlotDemo(Demo):
         data_source = context["data_source"]
         point_chart = self.renderer.PointChart(data_source,
                                   options={'title': "Sales Growth"})
-        context["point_chart"] = point_chart
+        pie_chart = flot.PieChart(context["simple_data_source"],
+                                  options = {'title': "Sales Growth"})
+        context.update({'point_chart': point_chart,
+                        "pie_chart": pie_chart})
         return context
 
 flot_demo = FlotDemo.as_view(renderer=flot)

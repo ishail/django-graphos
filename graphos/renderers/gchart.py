@@ -11,6 +11,11 @@ class LineChart(BaseGChart):
         return "graphos/gchart/line_chart.html"
 
 
+class GaugeChart(BaseGChart):
+    def get_js_template(self):
+        return "graphos/gchart/gauge_chart.html"
+
+
 class ColumnChart(BaseGChart):
     def get_js_template(self):
         return "graphos/gchart/column_chart.html"
@@ -43,6 +48,6 @@ class TreeMapChart(BaseGChart):
         return "graphos/gchart/treemap_chart.html"
 
 
-class AreaChart(BaseChart):
-    def get_template(self):
+class AreaChart(BaseGChart):
+    def get_js_template(self):
         return "graphos/gchart/area_chart.html"
